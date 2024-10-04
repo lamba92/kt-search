@@ -28,6 +28,8 @@ class Analysis : JsonDsl() {
 
     open class CharFilter : JsonDsl() {
         var type by property<String>()
+        var pattern by property<String>()
+        var replacement by property<String>()
 
     }
 
@@ -78,7 +80,7 @@ class IndexSettings : JsonDsl() {
 
 @Suppress("LeakingThis")
 @JsonDslMarker
-open class FieldMappingConfig(typeName: String) : JsonDsl() {
+open class FieldMappingConfig(typeName: String? = null) : JsonDsl() {
     var type by property<String>()
     var boost by property<Double>()
     var store by property<Boolean>()
@@ -96,9 +98,12 @@ open class FieldMappingConfig(typeName: String) : JsonDsl() {
     var script by property<String>()
     var onScriptError by property<String>()
     var meta by property<Map<String, String>>()
+    var positiveScoreImpact by property<Boolean>()
 
     init {
-        type = typeName
+        if (typeName != null) {
+            type = typeName
+        }
     }
 
     fun fields(block: FieldMappings.() -> Unit) {
@@ -122,7 +127,7 @@ enum class KnnSimilarity {
 }
 @Suppress("MemberVisibilityCanBePrivate")
 @JsonDslMarker
-class FieldMappings : JsonDsl() {
+open class FieldMappings : JsonDsl() {
     fun text(name: String) = field(name, "text") {}
     fun text(property: KProperty<*>) = field(property.name, "text") {}
     fun text(name: String, block: FieldMappingConfig.() -> Unit) = field(name, "text", block)
@@ -200,9 +205,12 @@ class FieldMappings : JsonDsl() {
     fun objField(property: KProperty<*>, dynamic: String? = null, block: (FieldMappings.() -> Unit)? = null) =
         objField(property.name, dynamic, block)
 
-    fun nestedField(name: String, block: FieldMappings.() -> Unit) {
+    fun nestedField(name: String, dynamic: Boolean? = null, block: FieldMappings.() -> Unit = {}) {
         field(name, "nested") {
             val fieldMappings = FieldMappings()
+            if (dynamic != null) {
+                this["dynamic"] = dynamic
+            }
             block.invoke(fieldMappings)
             if (fieldMappings.size > 0) {
                 this["properties"] = fieldMappings
@@ -210,7 +218,7 @@ class FieldMappings : JsonDsl() {
         }
     }
 
-    fun nestedField(property: KProperty<*>, block: FieldMappings.() -> Unit) = nestedField(property.name, block)
+    fun nestedField(property: KProperty<*>, dynamic: Boolean? = null, block: FieldMappings.() -> Unit = {}) = nestedField(property.name, dynamic, block)
 
     fun denseVector(name: String, dimensions: Int, index: Boolean = false, similarity: KnnSimilarity=KnnSimilarity.Cosine,block: (FieldMappingConfig.() -> Unit)? = null) {
         field(name, "dense_vector") {
@@ -226,17 +234,14 @@ class FieldMappings : JsonDsl() {
     fun denseVector(property: KProperty<*>, dimensions: Int,index: Boolean = false, similarity: KnnSimilarity=KnnSimilarity.Cosine,block: (FieldMappingConfig.() -> Unit)? = null) =
         denseVector(property.name, dimensions,index,similarity,block)
 
-    fun field(name: String, type: String) = field(name, type) {}
-    fun field(property: KProperty<*>, type: String) = field(property.name, type) {}
+    fun field(name: String, type: String? = null) = field(name, type) {}
+    fun field(property: KProperty<*>, type: String? = null, block: FieldMappingConfig.() -> Unit = {}) = field(property.name, type, block)
 
-    fun field(name: String, type: String, block: (FieldMappingConfig.() -> Unit)?) {
+    fun field(name: String, type: String? = null, block: (FieldMappingConfig.() -> Unit)?) {
         val mapping = FieldMappingConfig(type)
         block?.invoke(mapping)
         put(name, mapping, PropertyNamingConvention.AsIs)
     }
-
-    fun field(property: KProperty<*>, type: String, block: FieldMappingConfig.() -> Unit) =
-        field(property.name, type, block)
 
     fun join(name: String, block: JoinDefinition.() -> Unit) {
         val join = JoinDefinition()

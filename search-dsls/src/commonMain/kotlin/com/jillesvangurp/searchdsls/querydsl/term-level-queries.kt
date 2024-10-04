@@ -271,6 +271,7 @@ class WildCardQueryConfig : JsonDsl() {
     var value by property<String>()
     var boost by property<Double>()
     var rewrite by property<String>()
+    var caseInsensitive by property<Boolean>()
 }
 
 @SearchDSLMarker
@@ -323,4 +324,6 @@ class TermsSetQuery(field: String, vararg terms: String, block: (TermsSetQueryCo
 
 fun QueryClauses.termsSet(field: String, vararg terms: String,block: (TermsSetQueryConfig.() -> Unit)?=null) = TermsSetQuery(field,terms=terms,block)
 fun QueryClauses.termsSet(field: KProperty<*>, vararg terms: String,block: (TermsSetQueryConfig.() -> Unit)?=null) = TermsSetQuery(field.name,terms=terms,block)
+fun QueryClauses.termsSet(field: String, terms: Collection<String>,block: (TermsSetQueryConfig.() -> Unit)?=null) = TermsSetQuery(field,terms=terms.toTypedArray(),block)
+fun QueryClauses.termsSet(field: KProperty<*>, terms: Collection<String>,block: (TermsSetQueryConfig.() -> Unit)?=null) = TermsSetQuery(field.name,terms=terms.toTypedArray(),block)
 
